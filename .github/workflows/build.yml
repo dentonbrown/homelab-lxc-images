@@ -36,7 +36,11 @@ jobs:
           # use those storage drivers for a plain LXC rootfs build.
           sudo apt-get install -y gpg zstd xz-utils pkg-config \
             libgpgme-dev libbtrfs-dev libdevmapper-dev
-          go install github.com/lxc/distrobuilder/distrobuilder@latest
+          # Pinned to a tagged release, not @latest — @latest resolves to
+          # distrobuilder's newest commit (an untested pseudo-version)
+          # rather than a release, which hit a broken transitive
+          # dependency version (cyphar/filepath-securejoin) in practice.
+          go install github.com/lxc/distrobuilder/distrobuilder@v3.3.1
 
       - name: Build image
         working-directory: ${{ matrix.image }}
