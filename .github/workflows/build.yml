@@ -26,21 +26,23 @@ jobs:
           go-version: "stable"
 
       - name: Install distrobuilder
+        env:
+          # distrobuilder's own Makefile sets these — they stub out the
+          # containers_image storage backends (gpgme/btrfs/devicemapper),
+          # which otherwise need cgo headers we don't have and dragged in
+          # a broken transitive dependency version when left enabled.
+          # Building this way avoids both problems, matching upstream's
+          # own build process rather than improvising one.
+          GOFLAGS: -tags=containers_image_storage_stub,containers_image_docker_daemon_stub,containers_image_openpgp
         run: |
           sudo apt-get update
-          # gpg/zstd/xz-utils: used by our own build steps.
-          # pkg-config + lib*-dev: distrobuilder's go.podman.io/storage
-          # dependency needs these cgo headers to build at all (gpgme,
-          # btrfs, and devicemapper storage driver support) — go install
-          # fails without them even though distrobuilder itself doesn't
-          # use those storage drivers for a plain LXC rootfs build.
-          sudo apt-get install -y gpg zstd xz-utils pkg-config \
-            libgpgme-dev libbtrfs-dev libdevmapper-dev
-          # Pinned to a tagged release, not @latest — @latest resolves to
-          # distrobuilder's newest commit (an untested pseudo-version)
-          # rather than a release, which hit a broken transitive
-          # dependency version (cyphar/filepath-securejoin) in practice.
-          go install github.com/lxc/distrobuilder/distrobuilder@v3.3.1
+          sudo apt-get install -y gpg zstd xz-utils git
+          # go install pkg@tag failed (wanted a nested-module-style tag,
+          # "distrobuilder/v3.3.1", that doesn't exist) — building from a
+          # cloned checkout at the tag sidesteps that resolver quirk
+          # entirely, and matches how upstream actually builds it.
+          git clone --depth 1 --branch v3.3.1 https://github.com/lxc/distrobuilder.git /tmp/distrobuilder-src
+          (cd /tmp/distrobuilder-src && go install -v ./...)
 
       - name: Build image
         working-directory: ${{ matrix.image }}
