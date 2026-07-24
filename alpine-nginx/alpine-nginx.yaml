@@ -1,9 +1,12 @@
 image:
   distribution: alpine
-  # Pinned to a specific release on purpose (avoids silent drift) —
+  # Pinned to a specific *patch* release on purpose (avoids silent
+  # drift, and the minirootfs filename needs the full version anyway —
+  # "3.24" alone resolves to an empty version segment in the URL) —
   # check https://alpinelinux.org/releases/ periodically and bump this.
-  release: "3.24"
-  architecture: amd64
+  release: "3.24.1"
+  # Alpine's own download filenames use "x86_64", not "amd64".
+  architecture: x86_64
   description: Alpine + nginx, preconfigured, built by distrobuilder
 
 source:
