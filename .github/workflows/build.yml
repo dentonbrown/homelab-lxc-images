@@ -1,0 +1,50 @@
+name: Build and publish images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "alpine-nginx/**"
+      - "alpine-docker/**"
+      - ".github/workflows/build.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image: [alpine-nginx, alpine-docker]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+
+      - name: Install distrobuilder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gpg zstd xz-utils
+          go install github.com/lxc/distrobuilder/distrobuilder@latest
+
+      - name: Build image
+        working-directory: ${{ matrix.image }}
+        run: sudo "$(go env GOPATH)/bin/distrobuilder" build-lxc ${{ matrix.image }}.yaml
+
+      - name: Convert to Proxmox-compatible .tar.zst
+        working-directory: ${{ matrix.image }}
+        run: xz -dc rootfs.tar.xz | zstd -o ${{ matrix.image }}.tar.zst
+
+      - name: Publish as the "${{ matrix.image }}-latest" release
+        working-directory: ${{ matrix.image }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete ${{ matrix.image }}-latest --yes --cleanup-tag || true
+          gh release create ${{ matrix.image }}-latest ${{ matrix.image }}.tar.zst \
+            --title "${{ matrix.image }} (latest)" \
+            --notes "Automated build via distrobuilder. Source: $GITHUB_SHA"

@@ -1,0 +1,41 @@
+image:
+  distribution: alpine
+  # Pinned to a specific release on purpose (avoids silent drift) —
+  # check https://alpinelinux.org/releases/ periodically and bump this.
+  release: "3.24"
+  architecture: amd64
+  description: Alpine + nginx, preconfigured, built by distrobuilder
+
+source:
+  downloader: alpinelinux-http
+  url: https://dl-cdn.alpinelinux.org/alpine/
+  keys:
+    - 0482D84022F52DF1C4E7CD43293ACD0907D9495A
+  keyserver: keyserver.ubuntu.com
+
+packages:
+  manager: apk
+  update: true
+  cleanup: true
+  sets:
+    - packages:
+        - nginx
+      action: install
+
+files:
+  - generator: copy
+    source: files/nginx.conf
+    path: /etc/nginx/nginx.conf
+  - generator: copy
+    source: files/default.conf
+    path: /etc/nginx/http.d/default.conf
+  - generator: copy
+    source: files/index.html
+    path: /usr/share/nginx/html/index.html
+
+actions:
+  - trigger: post-packages
+    action: |-
+      #!/bin/sh
+      # Alpine uses OpenRC, not systemd.
+      rc-update add nginx default
