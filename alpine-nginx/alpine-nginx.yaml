@@ -22,6 +22,10 @@ packages:
   cleanup: true
   sets:
     - packages:
+        # alpine-base pulls in OpenRC — the raw minirootfs this build
+        # starts from doesn't include an init system at all, so
+        # `rc-update`/`rc-service` don't exist without this.
+        - alpine-base
         - nginx
       action: install
 
