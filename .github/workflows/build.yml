@@ -28,7 +28,14 @@ jobs:
       - name: Install distrobuilder
         run: |
           sudo apt-get update
-          sudo apt-get install -y gpg zstd xz-utils
+          # gpg/zstd/xz-utils: used by our own build steps.
+          # pkg-config + lib*-dev: distrobuilder's go.podman.io/storage
+          # dependency needs these cgo headers to build at all (gpgme,
+          # btrfs, and devicemapper storage driver support) — go install
+          # fails without them even though distrobuilder itself doesn't
+          # use those storage drivers for a plain LXC rootfs build.
+          sudo apt-get install -y gpg zstd xz-utils pkg-config \
+            libgpgme-dev libbtrfs-dev libdevmapper-dev
           go install github.com/lxc/distrobuilder/distrobuilder@latest
 
       - name: Build image
