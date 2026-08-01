@@ -44,6 +44,20 @@ actions:
       # Alpine uses OpenRC, not systemd.
       rc-update add docker default
 
+      # Stop udhcpc from managing /etc/resolv.conf. Found the hard way
+      # on proxy01 (homelab-proxy): the docker-lxc module's dns_servers
+      # variable updates Proxmox's own stored container config
+      # correctly, but udhcpc silently overwrites resolv.conf with
+      # whatever the DHCP server hands out on every lease renewal
+      # (not just at boot) -- reopening a real bug (Pi-hole's negative
+      # DNS caching broke Let's Encrypt's DNS-01 challenge) days after
+      # it was thought fixed, with no container restart as the
+      # trigger. RESOLV_CONF="no" is udhcpc's own documented escape
+      # hatch for exactly this. See
+      # homelab-docs/docs/security.md finding 4.
+      mkdir -p /etc/udhcpc
+      echo 'RESOLV_CONF="no"' >> /etc/udhcpc/udhcpc.conf
+
       # Docker Compose v2 CLI plugin — pulled from GitHub releases rather
       # than apk, matching what community-scripts' alpine-docker.sh does
       # (Alpine's apk repos don't reliably carry an up-to-date compose
